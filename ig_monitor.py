@@ -26,7 +26,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36",
     "Mozilla/5.0 (Linux; Android 12; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 ]
 
 def log(msg):
@@ -40,9 +39,8 @@ def enviar_telegram(texto):
     url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
     try:
         r = requests.post(url, json={
-            "chat_id":    TG_CHAT_ID,
-            "text":       texto,
-            "parse_mode": "Markdown"
+            "chat_id": TG_CHAT_ID,
+            "text":    texto,
         }, timeout=10)
         data = r.json()
         if data.get("ok"):
@@ -61,51 +59,64 @@ def obtener_headers():
     }
 
 def verificar_perfil(usuario):
-    url = f"https://www.instagram.com/{usuario}/"
-    intentos = 3
+    # Usar la API publica de Instagram para obtener datos del perfil
+    url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={usuario}"
+    headers = obtener_headers()
+    headers["X-IG-App-ID"] = "936619743392459"
+    headers["X-Requested-With"] = "XMLHttpRequest"
+    headers["Referer"] = f"https://www.instagram.com/{usuario}/"
 
-    for intento in range(intentos):
-        try:
-            headers = obtener_headers()
-            espera = random.uniform(3, 8)
-            time.sleep(espera)
+    try:
+        espera = random.uniform(3, 8)
+        time.sleep(espera)
 
-            r = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+        r = requests.get(url, headers=headers, timeout=15)
+        log(f"@{usuario} status: {r.status_code}")
 
-            if r.status_code == 429:
-                log(f"@{usuario} bloqueado (429). Esperando 2 horas...")
-                time.sleep(7200)
-                continue
+        if r.status_code == 404:
+            log(f"@{usuario} no encontrado.")
+            return "no_existe"
 
-            if r.status_code == 404:
-                log(f"@{usuario} no encontrado.")
-                return "no_existe"
+        if r.status_code == 401 or r.status_code == 403:
+            log(f"@{usuario} requiere login - cuenta privada.")
+            return "privado"
 
-            html = r.text
-            if "Log in" in html and "followed" not in html:
-                log(f"@{usuario} privado.")
-                return "privado"
-            else:
-                log(f"@{usuario} PUBLICO detectado.")
-                return "publico"
+        if r.status_code == 200:
+            try:
+                data = r.json()
+                user = data.get("data", {}).get("user", {})
+                if not user:
+                    log(f"@{usuario} sin datos de usuario - posiblemente privado.")
+                    return "privado"
 
-        except Exception as e:
-            log(f"@{usuario} intento {intento+1} fallido: {e}")
-            if intento < intentos - 1:
-                time.sleep(random.uniform(10, 30))
+                es_privado = user.get("is_private", True)
+                nombre = user.get("full_name", usuario)
 
-    log(f"@{usuario} todos los intentos fallaron.")
-    return "error"
+                if es_privado:
+                    log(f"@{usuario} ({nombre}) - PRIVADO.")
+                    return "privado"
+                else:
+                    log(f"@{usuario} ({nombre}) - PUBLICO.")
+                    return "publico"
+            except Exception as e:
+                log(f"@{usuario} error parseando JSON: {e}")
+                return "error"
+
+        log(f"@{usuario} respuesta inesperada: {r.status_code}")
+        return "error"
+
+    except Exception as e:
+        log(f"@{usuario} error de conexion: {e}")
+        return "error"
 
 def monitor():
-    log(f"Monitor IG iniciado")
+    log("Monitor IG iniciado")
 
     lista = "\n".join([f"- @{u}" for u in USUARIOS])
     enviar_telegram(
         f"Monitor Instagram iniciado\n\n"
         f"Vigilando {len(USUARIOS)} cuenta(s):\n{lista}\n\n"
-        f"Intervalo: entre {INTERVALO_HORAS_MIN} y {INTERVALO_HORAS_MAX} horas.\n"
-        f"Protecciones: User-Agent rotativo y delay aleatorio activos."
+        f"Intervalo: entre {INTERVALO_HORAS_MIN} y {INTERVALO_HORAS_MAX} horas."
     )
 
     activos = list(USUARIOS)
@@ -115,7 +126,7 @@ def monitor():
             estado = verificar_perfil(usuario)
             if estado == "publico":
                 enviar_telegram(
-                    f"Perfil publico detectado\n\n"
+                    f"PERFIL PUBLICO DETECTADO\n\n"
                     f"La cuenta @{usuario} ahora es publica.\n"
                     f"https://www.instagram.com/{usuario}/\n\n"
                     f"Entra antes de que la vuelva a poner en privado!"
