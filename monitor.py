@@ -3,7 +3,7 @@ import time
 import requests
 from datetime import datetime
 
-RUC     = "10446881561"
+RUC     = "10719373076"
 KEYWORD = "MES DE FEBRERO DEL 2026"
 API_URL = f"https://eap.osce.gob.pe/perfilprov-bus/1.0/ficha/{RUC}/contrataciones?pageNumber=1&searchText=&pageSize=10"
 
