@@ -10,7 +10,7 @@ API_URL = f"https://eap.osce.gob.pe/perfilprov-bus/1.0/ficha/{RUC}/contratacione
 TG_TOKEN   = os.environ.get("TG_TOKEN", "")
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "")
 
-INTERVALO_MINUTOS = 480
+INTERVALO_MINUTOS = 240
 
 
 def log(msg):
