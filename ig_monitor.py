@@ -13,8 +13,8 @@ USUARIOS = [
     # "usuario5",
 ]
 
-INTERVALO_HORAS_MIN = 20
-INTERVALO_HORAS_MAX = 28
+INTERVALO_HORAS_MIN = 8
+INTERVALO_HORAS_MAX = 16
 # ──────────────────────────────────────────────────────────────
 
 TG_TOKEN   = os.environ.get("TG_TOKEN", "")
