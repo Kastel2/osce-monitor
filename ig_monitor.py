@@ -7,7 +7,7 @@ from datetime import datetime
 # ─── CONFIGURACION ────────────────────────────────────────────
 
 USUARIOS = [
-“szarelly_”,
+"szarelly_",
 # “usuario2”,
 # “usuario3”,
 # “usuario4”,
